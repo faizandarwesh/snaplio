@@ -1,0 +1,67 @@
+name: snap_lio
+description: "SnapLio — your screenshots, finally useful. Search, act on and clean up, all on-device."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.4.3
+  go_router: ^18.0.2
+  drift: ^2.35.2
+  drift_flutter: ^0.3.1
+  path_provider: ^2.1.6
+  path: ^1.9.1
+  photo_manager: ^3.12.0
+  google_mlkit_text_recognition: ^0.17.1
+  shared_preferences: ^2.5.6
+  flutter_animate: ^4.5.2
+  url_launcher: ^6.3.3
+  share_plus: ^13.3.1
+  package_info_plus: ^10.2.2
+  crypto: ^3.0.7
+  intl: ^0.20.3
+  collection: ^1.19.1
+  flutter_native_splash: ^2.4.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  drift_dev: ^2.35.1
+  build_runner: ^2.16.2
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/brand/app_mark.png
+    - assets/fonts/OFL.txt
+  # Plus Jakarta Sans is bundled (not fetched at runtime) so the app stays 100% offline.
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
+          weight: 800
+
+flutter_native_splash:
+  color: "#0B0B10"
+  image: assets/brand/splash_mark.png
+  android_12:
+    color: "#0B0B10"
+    image: assets/brand/splash_mark_a12.png
+  android: true
+  ios: false
+  web: false
+  fullscreen: false
