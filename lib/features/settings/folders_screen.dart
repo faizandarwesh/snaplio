@@ -36,8 +36,9 @@ class FoldersScreen extends ConsumerWidget {
             children: [
               Text('Turn a folder off to stop sorting its screenshots. Nothing is deleted.', style: context.text.bodyMedium),
               const SizedBox(height: Space.md),
-              Container(
-                decoration: BoxDecoration(color: c.surface, borderRadius: Radii.mdAll, border: Border.all(color: c.border)),
+              Material(
+                color: c.surface,
+                shape: RoundedRectangleBorder(borderRadius: Radii.mdAll, side: BorderSide(color: c.border)),
                 clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [

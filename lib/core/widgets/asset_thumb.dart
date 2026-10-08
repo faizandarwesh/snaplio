@@ -27,7 +27,8 @@ class AssetThumbProvider extends ImageProvider<AssetThumbProvider> {
 
   Future<ui.Codec> _load(ImageDecoderCallback decode) async {
     final entity = AssetEntity(id: assetId, typeInt: AssetType.image.index, width: size, height: size);
-    final bytes = await entity.thumbnailDataWithSize(ThumbnailSize.square(size), quality: 82);
+    // Screenshots are tall: a size × 2·size bound keeps grid cells crisp.
+    final bytes = await entity.thumbnailDataWithSize(ThumbnailSize(size, size * 2), quality: 82);
     if (bytes == null || bytes.isEmpty) {
       throw StateError('No thumbnail for $assetId');
     }

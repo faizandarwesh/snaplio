@@ -184,7 +184,15 @@ class _FindAnythingArtState extends _LoopingArtState<FindAnythingArt> {
                     children: [
                       Icon(Icons.search_rounded, size: 20, color: c.textSecondary),
                       const SizedBox(width: 10),
-                      Text(_query.substring(0, typed), style: context.text.bodyLarge),
+                      Flexible(
+                        child: Text(
+                          _query.substring(0, typed),
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.clip,
+                          style: context.text.bodyLarge,
+                        ),
+                      ),
                       if ((t * 8).floor().isEven || typed < _query.length)
                         Container(width: 2, height: 18, margin: const EdgeInsets.only(left: 1), color: Brand.violet),
                     ],

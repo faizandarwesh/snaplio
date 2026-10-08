@@ -107,17 +107,19 @@ class _DetailScreenState extends ConsumerState<DetailScreen> with SingleTickerPr
           children: [
             Positioned.fill(child: ColoredBox(color: Colors.black.withValues(alpha: bgOpacity))),
             Positioned.fill(
-              child: GestureDetector(
-                onVerticalDragUpdate: _onDragUpdate,
-                onVerticalDragEnd: _onDragEnd,
-                onTap: () => setState(() => _chrome = !_chrome),
-                child: Transform.translate(
-                  offset: Offset(0, _drag),
-                  child: Transform.scale(
-                    scale: 1 - progress * 0.2,
-                    child: ValueListenableBuilder<bool>(
-                      valueListenable: _zoomed,
-                      builder: (context, zoomed, _) => PageView.builder(
+              // While zoomed, vertical drags must reach InteractiveViewer (pan),
+              // so the dismiss + paging recognizers are removed.
+              child: ValueListenableBuilder<bool>(
+                valueListenable: _zoomed,
+                builder: (context, zoomed, _) => GestureDetector(
+                  onVerticalDragUpdate: zoomed ? null : _onDragUpdate,
+                  onVerticalDragEnd: zoomed ? null : _onDragEnd,
+                  onTap: () => setState(() => _chrome = !_chrome),
+                  child: Transform.translate(
+                    offset: Offset(0, _drag),
+                    child: Transform.scale(
+                      scale: 1 - progress * 0.2,
+                      child: PageView.builder(
                         controller: _pages,
                         physics: zoomed ? const NeverScrollableScrollPhysics() : const BouncingScrollPhysics(),
                         itemCount: _ids.length,

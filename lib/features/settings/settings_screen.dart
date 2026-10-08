@@ -195,8 +195,9 @@ class _Group extends StatelessWidget {
             padding: const EdgeInsets.only(left: 4, bottom: Space.xs),
             child: Text(title.toUpperCase(), style: context.text.labelSmall?.copyWith(letterSpacing: 1.1, color: c.textTertiary)),
           ),
-          Container(
-            decoration: BoxDecoration(color: c.surface, borderRadius: Radii.mdAll, border: Border.all(color: c.border)),
+          Material(
+            color: c.surface,
+            shape: RoundedRectangleBorder(borderRadius: Radii.mdAll, side: BorderSide(color: c.border)),
             clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
