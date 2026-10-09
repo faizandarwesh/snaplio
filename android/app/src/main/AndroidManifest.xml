@@ -35,6 +35,17 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Deep links from notifications and home-screen widgets.
+                 snapsort:// is accepted as an alias of snaplio://. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="snaplio" />
+                <data android:scheme="snapsort" />
+            </intent-filter>
+            <!-- snaplio_native delivers links to Dart itself (full URI incl. host). -->
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="false" />
         </activity>
         <!-- ML Kit: the Latin text model is bundled via com.google.mlkit:text-recognition,
              so nothing is downloaded at runtime. -->

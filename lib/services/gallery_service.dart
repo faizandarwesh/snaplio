@@ -26,6 +26,13 @@ class ScreenshotAlbum {
 /// Thin wrapper around photo_manager so the rest of the app never talks to the
 /// plugin directly.
 class GalleryService {
+  GalleryService({this.background = false});
+
+  /// Headless engines have no Activity, so photo_manager can't check or ask
+  /// for permission there. The app already holds it; MediaStore simply
+  /// returns nothing if it was revoked.
+  final bool background;
+
   static const _permOption = PermissionRequestOption(
     androidPermission: AndroidPermission(type: RequestType.image, mediaLocation: false),
   );
@@ -38,6 +45,7 @@ class GalleryService {
       };
 
   Future<GalleryAccess> currentAccess() async {
+    if (background) return GalleryAccess.granted;
     try {
       return _map(await PhotoManager.getPermissionState(requestOption: _permOption));
     } catch (_) {

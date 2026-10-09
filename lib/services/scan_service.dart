@@ -47,12 +47,13 @@ class ScanProgress {
 
 /// Result of processing one screenshot (feeds notifications and toasts).
 class ProcessedShot {
-  const ProcessedShot({required this.row, required this.category, required this.entities, this.expense});
+  const ProcessedShot({required this.row, required this.category, required this.entities, this.text, this.expense});
 
   /// The row as it was before processing (id, file name, createdAt).
   final ScreenshotRow row;
   final ScreenshotCategory category;
   final List<ExtractedEntity> entities;
+  final String? text;
   final IngestResult? expense;
 }
 
@@ -216,7 +217,7 @@ class ScanService {
           debugPrint('Expense extraction failed for ${row.assetId}: $e');
         }
       }
-      final shot = ProcessedShot(row: row, category: category, entities: analysis.entities, expense: expense);
+      final shot = ProcessedShot(row: row, category: category, entities: analysis.entities, text: text, expense: expense);
       if (!_processed.isClosed) _processed.add(shot);
       return shot;
     } catch (e) {

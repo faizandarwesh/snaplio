@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/smart/smart_actions.dart';
+import 'deep_links.dart';
 import 'providers.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
@@ -13,7 +15,9 @@ class SnapLioApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(settingsProvider.select((s) => s.themeMode));
     final router = ref.watch(routerProvider);
+    ref.watch(deepLinkProvider);
     return MaterialApp.router(
+      scaffoldMessengerKey: rootMessengerKey,
       title: 'SnapLio',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),

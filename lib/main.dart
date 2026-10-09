@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
 import 'app/providers.dart';
+import 'background/background_main.dart';
 
 Future<void> main() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
@@ -27,3 +28,8 @@ Future<void> main() async {
     ),
   );
 }
+
+/// Headless entrypoint for the native new-screenshot job. Must stay in the
+/// main library (DartEntrypoint with no library URI) and never be tree-shaken.
+@pragma('vm:entry-point')
+Future<void> backgroundMain() => runHeadlessEngine();

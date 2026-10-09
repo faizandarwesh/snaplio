@@ -12,6 +12,7 @@ import '../../core/widgets/pressable.dart';
 import '../../core/widgets/progress_ring.dart';
 import '../../domain/models.dart';
 import '../../services/scan_service.dart';
+import '../smart/smart_ui.dart';
 
 /// Live first scan: progress ring, "Sorting X of Y", category chips counting
 /// up, then a short celebration and auto-navigation to Home.
@@ -47,6 +48,9 @@ class _FirstScanScreenState extends ConsumerState<FirstScanScreen> {
     Haptics.medium();
     setState(() => _finished = true);
     await Future<void>.delayed(const Duration(milliseconds: 2200));
+    if (!mounted) return;
+    // In-context ask: right after the user has seen what SnapLio found.
+    await maybeShowSmartActionsSheet(context, ref);
     if (mounted) context.go(Routes.home);
   }
 

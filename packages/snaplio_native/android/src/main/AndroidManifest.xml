@@ -1,0 +1,38 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <application>
+        <!-- Fires within ~2s of a new image in MediaStore; runs the Dart scan headless. -->
+        <service
+            android:name="com.snaplio.nativebridge.ScreenshotJobService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <!-- Copy / Not an expense: no UI. -->
+        <receiver
+            android:name="com.snaplio.nativebridge.ActionReceiver"
+            android:exported="false" />
+
+        <!-- Content-trigger jobs don't survive a reboot or an app update. -->
+        <receiver
+            android:name="com.snaplio.nativebridge.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Open / Maps / Call / WhatsApp from a notification. An Activity target
+             (not a broadcast trampoline) may start the other app on Android 12+. -->
+        <activity
+            android:name="com.snaplio.nativebridge.NotificationActionActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+    </application>
+</manifest>

@@ -24,6 +24,7 @@ import '../../domain/expense/spend_summary.dart';
 import '../../services/expense_service.dart';
 import '../../services/gallery_service.dart';
 import '../../services/scan_service.dart';
+import '../smart/smart_ui.dart';
 import '../spend/spend_providers.dart';
 import '../spend/spend_widgets.dart';
 
@@ -146,6 +147,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               SliverToBoxAdapter(child: _enter(const _SpendCard(), 3)),
+              const SliverToBoxAdapter(child: SmartActionsHomeCard()),
               const SliverToBoxAdapter(child: SectionHeader('Categories')),
               _CategoryGrid(stats: cats.value ?? const [], animate: _animate),
               SliverToBoxAdapter(

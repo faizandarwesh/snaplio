@@ -315,7 +315,10 @@ class _InfoSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
     final entities = ref.watch(entitiesProvider(row.assetId)).value ?? const [];
-    final actions = actionsFor(entities);
+    final actions = actionsFor(
+      entities,
+      onOpenLink: (e) => ref.read(repositoryProvider).markLinkOpened(e.assetId, e.value),
+    );
     final category = ScreenshotCategory.fromName(row.category);
     final hasText = (row.ocrText ?? '').trim().isNotEmpty;
 

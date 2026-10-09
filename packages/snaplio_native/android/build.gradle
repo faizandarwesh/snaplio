@@ -1,0 +1,37 @@
+group 'com.snaplio.nativebridge'
+version '1.0'
+
+def isAgp9OrAbove = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize('.')[0].toInteger() >= 9
+def builtInKotlinProperty = project.findProperty('android.builtInKotlin') ?: rootProject.findProperty('android.builtInKotlin')
+// AGP 9+ enables built-in Kotlin by default; Flutter sets android.builtInKotlin=false during migration.
+def useBuiltInKotlin = isAgp9OrAbove && (builtInKotlinProperty == null ? true : builtInKotlinProperty.toString().toBoolean())
+
+apply plugin: 'com.android.library'
+if (!useBuiltInKotlin) {
+    apply plugin: 'kotlin-android'
+}
+
+android {
+    namespace 'com.snaplio.nativebridge'
+    compileSdk 36
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+    defaultConfig {
+        minSdkVersion 24
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    if (!useBuiltInKotlin) {
+        kotlinOptions {
+            jvmTarget = "17"
+        }
+    }
+}
+
+dependencies {
+    implementation "androidx.core:core:1.13.1"
+}

@@ -1,0 +1,19 @@
+name: snaplio_native
+description: SnapLio's Android bridge — new-screenshot job, headless engine, notifications, deep links. Registered in every Flutter engine (app, job, workmanager, widgets).
+version: 1.0.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.13.1
+  flutter: '>=3.38.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.snaplio.nativebridge
+        pluginClass: SnapNativePlugin

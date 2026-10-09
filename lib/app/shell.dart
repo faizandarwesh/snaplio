@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 
 import '../core/design/tokens.dart';
 import '../core/haptics.dart';
+import '../features/smart/smart_actions.dart';
+import 'deep_links.dart';
 import 'providers.dart';
 
 /// App shell: tab content + floating frosted pill navigation that hides on
@@ -32,10 +34,14 @@ class _AppShellState extends ConsumerState<AppShell> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startScan();
       ref.read(spendBackfillProvider.notifier).runIfNeeded();
+      ref.read(smartActionsProvider.notifier).onAppStart();
+      ref.read(deepLinkProvider).markReady();
     });
   }
 
   Future<void> _onResume() async {
+    // The background job may have written while we were away.
+    await ref.read(smartActionsProvider.notifier).onResume();
     final access = await ref.read(galleryAccessProvider.notifier).refresh();
     if (access.canRead) _startScan();
   }

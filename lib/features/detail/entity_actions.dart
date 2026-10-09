@@ -42,7 +42,8 @@ Future<String?> _copy(String text, String what) async {
   return '$what copied';
 }
 
-List<EntityAction> actionsFor(List<EntityRow> entities) {
+/// [onOpenLink] records the link as opened (weekly recap: "unread links").
+List<EntityAction> actionsFor(List<EntityRow> entities, {void Function(EntityRow link)? onOpenLink}) {
   final byType = <EntityType, List<EntityRow>>{};
   for (final e in entities) {
     final t = EntityType.fromName(e.type);
@@ -61,7 +62,9 @@ List<EntityAction> actionsFor(List<EntityRow> entities) {
       color: _blue,
       run: () async {
         final uri = Uri.tryParse(e.value);
-        return uri == null ? 'Invalid link' : _open(uri);
+        if (uri == null) return 'Invalid link';
+        onOpenLink?.call(e);
+        return _open(uri);
       },
     ));
   }

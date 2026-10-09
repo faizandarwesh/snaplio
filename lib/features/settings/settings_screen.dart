@@ -11,7 +11,10 @@ import '../../core/design/tokens.dart';
 import '../../core/haptics.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/app_mark.dart';
+import '../../domain/notifications/smart_notifications.dart';
 import '../../services/gallery_service.dart';
+import '../smart/smart_actions.dart';
+import 'package:snaplio_native/snaplio_native.dart';
 
 final _packageInfoProvider = FutureProvider<PackageInfo>((ref) => PackageInfo.fromPlatform());
 
@@ -79,6 +82,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ]),
+          const _SmartGroup(),
           _Group(title: 'Library', children: [
             _Tile(
               icon: Icons.refresh_rounded,
@@ -208,6 +212,61 @@ class _Group extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _SmartGroup extends ConsumerWidget {
+  const _SmartGroup();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(smartActionsProvider);
+    final n = ref.read(smartActionsProvider.notifier);
+    final blocked = s.settings.enabled && s.permission != NotificationPermission.granted;
+    final kinds = [
+      (SmartKind.otp, 'Codes (OTP)', Icons.password_rounded, s.settings.otp),
+      (SmartKind.receipt, 'Receipts', Icons.receipt_long_rounded, s.settings.receipts),
+      (SmartKind.link, 'Links', Icons.link_rounded, s.settings.links),
+      (SmartKind.address, 'Addresses', Icons.map_outlined, s.settings.addresses),
+      (SmartKind.phone, 'Phone numbers', Icons.call_outlined, s.settings.phones),
+    ];
+    return _Group(title: 'Smart Actions', children: [
+      SwitchListTile(
+        value: s.active,
+        onChanged: (v) => n.setEnabled(v),
+        secondary: Icon(Icons.notifications_active_outlined, color: context.colors.textSecondary),
+        title: Text('Smart Actions', style: context.text.bodyLarge),
+        subtitle: Text(
+          blocked
+              ? 'Notifications are blocked — turn on to allow'
+              : s.active
+                  ? 'Act on new screenshots from the notification'
+                  : 'Off',
+          style: context.text.bodySmall,
+        ),
+      ),
+      if (s.active)
+        for (final (kind, label, icon, on) in kinds)
+          SwitchListTile(
+            value: on,
+            dense: true,
+            onChanged: (v) => n.setKind(kind, v),
+            secondary: Icon(icon, size: 20, color: context.colors.textTertiary),
+            title: Text(label, style: context.text.bodyMedium?.copyWith(color: context.colors.textPrimary)),
+          ),
+      _Tile(
+        icon: Icons.tune_rounded,
+        title: 'Notification settings',
+        subtitle: 'Sound and style for the “Smart actions” channel',
+        onTap: SnapNative.openNotificationSettings,
+      ),
+      _Tile(
+        icon: Icons.battery_alert_outlined,
+        title: 'Not getting notifications?',
+        subtitle: 'Fix battery restrictions on your phone',
+        onTap: () => context.push(Routes.batteryHelp),
+      ),
+    ]);
   }
 }
 

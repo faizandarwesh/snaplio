@@ -18,6 +18,7 @@ import '../features/scan/first_scan_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/folders_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/smart/smart_ui.dart';
 import '../features/spend/expense_edit_screen.dart';
 import '../features/spend/spend_review_screen.dart';
 import '../features/spend/spend_screen.dart';
@@ -35,12 +36,15 @@ abstract final class Routes {
   static const clean = '/clean';
   static const settings = '/settings';
   static const folders = '/settings/folders';
+  static const batteryHelp = '/settings/battery';
   static const debug = '/debug';
   static const expenseNew = '/expense/new';
   static const spendReview = '/spend-review';
 
   static String category(ScreenshotCategory c) => '/category/${c.name}';
   static String expense(int id) => '/expense/$id';
+  static String recap(String id) => '/recap/$id';
+  static const recapHistory = '/recaps';
   static String detail(String id) => '/shot/${Uri.encodeComponent(id)}';
   static String review(CleanupKind k) => '/review/${k.name}';
 }
@@ -127,6 +131,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (c, s) => _slideIn(s, const SettingsScreen()),
         routes: [
           GoRoute(parentNavigatorKey: rootNavigatorKey, path: 'folders', builder: (c, s) => const FoldersScreen()),
+          GoRoute(parentNavigatorKey: rootNavigatorKey, path: 'battery', pageBuilder: (c, s) => _slideIn(s, const BatteryHelpScreen())),
         ],
       ),
       GoRoute(

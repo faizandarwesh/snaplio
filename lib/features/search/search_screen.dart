@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/deep_links.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../app/shell.dart';
@@ -106,6 +107,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _focus.requestFocus();
       });
+    });
+    // The Links widget / deep link opens Search filtered to Links.
+    ref.listen(searchPresetProvider, (_, p) {
+      if (!p.links) return;
+      _focus.unfocus();
+      setState(() {
+        _cats
+          ..clear()
+          ..add(ScreenshotCategory.links);
+      });
+      _run();
     });
 
     final topPad = MediaQuery.paddingOf(context).top;

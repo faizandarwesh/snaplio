@@ -3,6 +3,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/deep_links.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../core/design/tokens.dart';
@@ -35,6 +36,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
     final routeFuture = _destination();
     if (!reduce) await _c.forward();
     final route = await routeFuture;
+    if (!mounted) return;
+    // A notification / widget link that launched the app waits until the
+    // shell is up (after onboarding if needed).
+    final deepLinks = ref.read(deepLinkProvider);
+    final link = await deepLinks.takeInitialLink();
+    if (link != null) deepLinks.handle(link);
     if (!mounted) return;
     context.go(route);
   }
