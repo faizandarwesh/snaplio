@@ -12,7 +12,11 @@ import 'package:snap_lio/features/home/home_screen.dart';
 import 'package:snap_lio/features/onboarding/onboarding_screen.dart';
 import 'package:snap_lio/features/onboarding/permission_screen.dart';
 import 'package:snap_lio/features/search/search_screen.dart';
+import 'package:snap_lio/data/expense_repository.dart';
 import 'package:snap_lio/features/settings/settings_screen.dart';
+import 'package:snap_lio/features/spend/expense_edit_screen.dart';
+import 'package:snap_lio/features/spend/spend_providers.dart';
+import 'package:snap_lio/features/spend/spend_screen.dart';
 import 'package:snap_lio/services/gallery_service.dart';
 import 'package:snap_lio/services/scan_service.dart';
 
@@ -34,6 +38,38 @@ ScreenshotRow _row(int i, ScreenshotCategory c) => ScreenshotRow(
       processedAt: DateTime(2026, 10, 8),
     );
 
+ExpenseView _x(int i, {String cat = 'food', String type = 'expense', double conf = 0.9, String cur = 'PKR'}) {
+  final now = DateTime.now();
+  return ExpenseView(ExpenseRow(
+    id: i,
+    assetId: i.isEven ? 'a$i' : null,
+    amountMinor: 125000 + i * 99999,
+    currency: cur,
+    type: type,
+    payee: i == 3 ? 'A very long merchant name that will not fit on one line at all' : 'Payee $i',
+    transactionId: 'TID$i',
+    date: DateTime(now.year, now.month, 1 + i % 3, 12),
+    category: cat,
+    note: '',
+    source: i.isEven ? 'auto' : 'manual',
+    confidence: conf,
+    isConfirmed: false,
+    isExcluded: i == 4,
+    createdAt: now,
+    updatedAt: now,
+  ));
+}
+
+final _expenses = [
+  _x(0),
+  _x(1, cat: 'bills'),
+  _x(2, cat: 'transport', conf: 0.4),
+  _x(3, cat: 'shopping'),
+  _x(4),
+  _x(5, type: 'income'),
+  _x(6, cur: 'USD'),
+];
+
 Future<void> _pump(WidgetTester tester, Widget screen, {required Brightness brightness, double textScale = 1.3}) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
@@ -52,6 +88,9 @@ Future<void> _pump(WidgetTester tester, Widget screen, {required Brightness brig
             for (final c in ScreenshotCategory.values) CategoryStat(c, 120 + c.index * 7, 100000000, const ['a1', 'a2', 'a3']),
           ])),
       recentScreenshotsProvider.overrideWith((ref) => Stream.value([for (var i = 0; i < 6; i++) _row(i, ScreenshotCategory.otp)])),
+      monthExpensesProvider.overrideWith((ref, month) => Stream.value(_expenses)),
+      needsReviewProvider.overrideWith((ref) => Stream.value([_expenses[2]])),
+      expenseProvider.overrideWith((ref, id) => Stream.value(_expenses[2])),
       cleanupReportProvider.overrideWith((ref) => Stream.value(const CleanupReport([
             CleanupSuggestion(kind: CleanupKind.oldOtps, assetIds: ['a1', 'a2'], totalBytes: 1800000),
             CleanupSuggestion(kind: CleanupKind.duplicates, assetIds: ['a3'], totalBytes: 900000),
@@ -82,6 +121,9 @@ void main() {
     'cleanup': () => const CleanupScreen(),
     'settings': () => const SettingsScreen(),
     'search': () => const SearchScreen(),
+    'spend': () => const SpendScreen(),
+    'expense detail': () => const ExpenseEditScreen(id: 2),
+    'add expense': () => const ExpenseEditScreen(),
   };
 
   for (final b in Brightness.values) {

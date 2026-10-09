@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/design/tokens.dart';
+
 import '../domain/cleanup_rules/cleanup_rules.dart';
 import '../domain/models.dart';
 import '../features/category/category_screen.dart';
@@ -16,6 +18,9 @@ import '../features/scan/first_scan_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/folders_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/spend/expense_edit_screen.dart';
+import '../features/spend/spend_review_screen.dart';
+import '../features/spend/spend_screen.dart';
 import '../features/splash/splash_screen.dart';
 import 'shell.dart';
 
@@ -26,12 +31,16 @@ abstract final class Routes {
   static const firstScan = '/first-scan';
   static const home = '/home';
   static const search = '/search';
+  static const spend = '/spend';
   static const clean = '/clean';
   static const settings = '/settings';
   static const folders = '/settings/folders';
   static const debug = '/debug';
+  static const expenseNew = '/expense/new';
+  static const spendReview = '/spend-review';
 
   static String category(ScreenshotCategory c) => '/category/${c.name}';
+  static String expense(int id) => '/expense/$id';
   static String detail(String id) => '/shot/${Uri.encodeComponent(id)}';
   static String review(CleanupKind k) => '/review/${k.name}';
 }
@@ -45,6 +54,35 @@ class DetailArgs {
 }
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
+
+/// Shell branch indexes (floating nav order).
+abstract final class Tabs {
+  static const home = 0;
+  static const search = 1;
+  static const spend = 2;
+  static const clean = 3;
+}
+
+/// Pushed full screens (Settings, expense detail): slide in from the right
+/// with a fade, matching Android's predictive-back direction.
+CustomTransitionPage<void> _slideIn(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: Motion.slow,
+    reverseTransitionDuration: Motion.medium,
+    transitionsBuilder: (context, animation, secondary, child) {
+      final curved = CurvedAnimation(parent: animation, curve: Motion.enter, reverseCurve: Curves.easeInCubic);
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween(begin: const Offset(0.08, 0), end: Offset.zero).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
 
 CustomTransitionPage<void> _fadeThrough(GoRouterState state, Widget child, {bool opaque = true}) {
   return CustomTransitionPage<void>(
@@ -79,9 +117,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         branches: [
           StatefulShellBranch(routes: [GoRoute(path: Routes.home, builder: (c, s) => const HomeScreen())]),
           StatefulShellBranch(routes: [GoRoute(path: Routes.search, builder: (c, s) => const SearchScreen())]),
+          StatefulShellBranch(routes: [GoRoute(path: Routes.spend, builder: (c, s) => const SpendScreen())]),
           StatefulShellBranch(routes: [GoRoute(path: Routes.clean, builder: (c, s) => const CleanupScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: Routes.settings, builder: (c, s) => const SettingsScreen())]),
         ],
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: Routes.settings,
+        pageBuilder: (c, s) => _slideIn(s, const SettingsScreen()),
+        routes: [
+          GoRoute(parentNavigatorKey: rootNavigatorKey, path: 'folders', builder: (c, s) => const FoldersScreen()),
+        ],
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: Routes.expenseNew,
+        pageBuilder: (c, s) => _slideIn(s, const ExpenseEditScreen()),
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: '/expense/:id',
+        pageBuilder: (c, s) => _slideIn(s, ExpenseEditScreen(id: int.tryParse(s.pathParameters['id']!) ?? -1)),
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: Routes.spendReview,
+        pageBuilder: (c, s) => _slideIn(s, const SpendReviewScreen()),
       ),
       GoRoute(
         parentNavigatorKey: rootNavigatorKey,
@@ -104,7 +165,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           kind: CleanupKind.values.firstWhere((k) => k.name == s.pathParameters['kind'], orElse: () => CleanupKind.old),
         ),
       ),
-      GoRoute(parentNavigatorKey: rootNavigatorKey, path: Routes.folders, builder: (c, s) => const FoldersScreen()),
       GoRoute(parentNavigatorKey: rootNavigatorKey, path: Routes.debug, builder: (c, s) => const DebugScanScreen()),
     ],
   );

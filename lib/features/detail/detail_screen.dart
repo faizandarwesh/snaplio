@@ -13,8 +13,11 @@ import '../../core/widgets/asset_thumb.dart';
 import '../../core/widgets/misc.dart';
 import '../../core/widgets/pressable.dart';
 import '../../data/screenshot_repository.dart';
+import '../../domain/expense/money.dart';
 import '../../domain/models.dart';
 import '../common/screenshot_actions.dart';
+import '../spend/spend_providers.dart';
+import '../spend/spend_widgets.dart';
 import 'entity_actions.dart';
 
 /// Full-screen viewer: pinch-zoom, Hero from the grid, swipe down to dismiss,
@@ -364,6 +367,7 @@ class _InfoSheet extends ConsumerWidget {
               ),
               const SizedBox(height: Space.lg),
             ],
+            if (category == ScreenshotCategory.receipts) _LinkedExpense(assetId: row.assetId),
             Row(
               children: [
                 Expanded(child: SoftButton(label: 'Share', icon: Icons.ios_share_rounded, expand: true, onPressed: () => shareScreenshots(ref, [row]))),
@@ -476,6 +480,52 @@ class _InfoSheet extends ConsumerWidget {
         expenses.onChanged?.call();
       }
     }
+  }
+}
+
+/// "Rs 2,500 · Food · Edit" for receipts that made it into Spend.
+class _LinkedExpense extends ConsumerWidget {
+  const _LinkedExpense({required this.assetId});
+  final String assetId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final x = ref.watch(expenseForAssetProvider(assetId)).value;
+    if (x == null) return const SizedBox.shrink();
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.md),
+      child: Pressable(
+        semanticLabel: 'Edit expense',
+        onTap: () => context.push(Routes.expense(x.row.id)),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 52),
+          padding: const EdgeInsets.symmetric(horizontal: Space.sm, vertical: Space.xs),
+          decoration: BoxDecoration(color: c.surface, borderRadius: Radii.smAll, border: Border.all(color: c.border)),
+          child: Row(
+            children: [
+              Icon(Icons.account_balance_wallet_outlined, size: 18, color: c.textSecondary),
+              const SizedBox(width: Space.xs),
+              Flexible(
+                child: Text(
+                  formatMoneyMinor(x.row.amountMinor, x.row.currency),
+                  overflow: TextOverflow.ellipsis,
+                  style: context.text.labelLarge?.copyWith(
+                    color: x.row.isExcluded ? c.textTertiary : c.textPrimary,
+                    decoration: x.row.isExcluded ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+              ),
+              const SizedBox(width: Space.xs),
+              SpendCategoryChip(x.category),
+              const Spacer(),
+              Text('Edit', style: context.text.labelMedium?.copyWith(color: Brand.violet)),
+              const Icon(Icons.chevron_right_rounded, size: 18, color: Brand.violet),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

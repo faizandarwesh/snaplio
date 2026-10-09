@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/expense/expense_category.dart';
 import '../../domain/models.dart';
 
 /// Spacing on an 8pt grid.
@@ -144,4 +145,40 @@ class CategoryStyle {
         ScreenshotCategory.images => const CategoryStyle(Color(0xFFEB8DBA), Icons.image_outlined),
         ScreenshotCategory.others => const CategoryStyle(Color(0xFF8E8E9A), Icons.folder_outlined),
       };
+}
+
+/// Per spend-category accent + icon, from the same muted palette as
+/// [CategoryStyle] so charts, chips and lists read as one system.
+abstract final class SpendStyle {
+  static Color color(ExpenseCategory c) => switch (c) {
+        ExpenseCategory.food => const Color(0xFFE8A951),
+        ExpenseCategory.bills => const Color(0xFF6B9EF2),
+        ExpenseCategory.shopping => const Color(0xFFEB8DBA),
+        ExpenseCategory.transport => const Color(0xFF4DBDB3),
+        ExpenseCategory.health => const Color(0xFFEE7B6E),
+        ExpenseCategory.education => const Color(0xFF9B87F5),
+        ExpenseCategory.transfers => const Color(0xFF5BBF8A),
+        ExpenseCategory.other => const Color(0xFF8E8E9A),
+      };
+
+  static IconData icon(ExpenseCategory c) => switch (c) {
+        ExpenseCategory.food => Icons.restaurant_rounded,
+        ExpenseCategory.bills => Icons.bolt_rounded,
+        ExpenseCategory.shopping => Icons.shopping_bag_outlined,
+        ExpenseCategory.transport => Icons.directions_car_filled_outlined,
+        ExpenseCategory.health => Icons.medical_services_outlined,
+        ExpenseCategory.education => Icons.school_outlined,
+        ExpenseCategory.transfers => Icons.swap_horiz_rounded,
+        ExpenseCategory.other => Icons.more_horiz_rounded,
+      };
+
+  static Color tint(BuildContext context, ExpenseCategory c) =>
+      color(c).withValues(alpha: context.isDark ? 0.14 : 0.12);
+
+  static List<Color> get palette => [for (final c in ExpenseCategory.values) color(c)];
+
+  /// Spend going up is shown in a soft coral, down in a soft green.
+  static const up = Color(0xFFEE7B6E);
+  static const down = Color(0xFF5BBF8A);
+  static const income = Color(0xFF5BBF8A);
 }

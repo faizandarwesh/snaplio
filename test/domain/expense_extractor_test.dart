@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snap_lio/domain/expense/csv_export.dart';
 import 'package:snap_lio/domain/expense/dedupe.dart';
 import 'package:snap_lio/domain/expense/expense_category.dart';
 import 'package:snap_lio/domain/expense/expense_extractor.dart';
@@ -336,5 +337,17 @@ TID 019283746501
     test('most frequent currency', () {
       expect(mostFrequentCurrency([e(1, 1, DateTime(2026)), e(2, 1, DateTime(2026), cur: 'AED'), e(3, 1, DateTime(2026), cur: 'AED')]), 'AED');
     });
+  });
+
+  test('CSV export escapes and neutralizes formulas', () {
+    final csv = expensesToCsv([
+      CsvExpense(date: DateTime(2026, 10, 5, 9, 3), type: 'expense', amountMinor: 250000, currency: 'PKR', payee: 'Ali, "AK" Khan',
+          category: 'Transfers', note: '=HYPERLINK()', transactionId: null, source: 'auto', excluded: false),
+      CsvExpense(date: DateTime(2026, 10, 1), type: 'expense', amountMinor: 1299, currency: 'USD', payee: null,
+          category: 'Food', note: '', transactionId: 'T1', source: 'manual', excluded: true),
+    ]);
+    final lines = csv.split('\r\n');
+    expect(lines[1], '2026-10-01 00:00,expense,12.99,USD,,Food,,T1,manual,yes');
+    expect(lines[2], '2026-10-05 09:03,expense,2500.00,PKR,"Ali, ""AK"" Khan",Transfers,\'=HYPERLINK(),,auto,no');
   });
 }

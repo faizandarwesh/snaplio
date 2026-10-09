@@ -7,7 +7,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
-import '../../app/shell.dart';
 import '../../core/design/tokens.dart';
 import '../../core/haptics.dart';
 import '../../core/utils/format.dart';
@@ -46,15 +45,13 @@ class SettingsScreen extends ConsumerWidget {
     final stats = ref.watch(libraryStatsProvider).value;
     final access = ref.watch(galleryAccessProvider).value;
     final version = ref.watch(_packageInfoProvider).value;
-    final topPad = MediaQuery.paddingOf(context).top;
     final c = context.colors;
 
     return Scaffold(
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
-        padding: EdgeInsets.fromLTRB(Space.screen, topPad + Space.lg, Space.screen, navBarClearance(context)),
+        padding: EdgeInsets.fromLTRB(Space.screen, Space.xs, Space.screen, MediaQuery.paddingOf(context).bottom + Space.xl),
         children: [
-          Text('Settings', style: context.text.displaySmall),
-          const SizedBox(height: Space.lg),
           _Group(title: 'Appearance', children: [
             Padding(
               padding: const EdgeInsets.all(Space.sm),

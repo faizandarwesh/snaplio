@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:snap_lio/data/db/app_database.dart';
 import 'package:snap_lio/data/screenshot_repository.dart';
 
 /// The exact v1 (SnapLio 1.0) schema, dumped from the shipped build.

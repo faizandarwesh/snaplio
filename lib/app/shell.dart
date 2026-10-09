@@ -115,8 +115,8 @@ class _NavItem {
 const _items = [
   _NavItem('Home', Icons.home_outlined, Icons.home_rounded),
   _NavItem('Search', Icons.search_rounded, Icons.manage_search_rounded),
+  _NavItem('Spend', Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded),
   _NavItem('Clean', Icons.cleaning_services_outlined, Icons.cleaning_services_rounded),
-  _NavItem('Settings', Icons.settings_outlined, Icons.settings_rounded),
 ];
 
 /// Bottom padding the tab screens should reserve for the floating nav.

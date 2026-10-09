@@ -4,20 +4,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../app/shell.dart';
 import '../../core/design/tokens.dart';
+import '../../core/haptics.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/asset_thumb.dart';
 import '../../core/widgets/misc.dart';
 import '../../core/widgets/pressable.dart';
+import '../../core/widgets/progress_ring.dart';
 import '../../core/widgets/shimmer.dart';
 import '../../core/widgets/states.dart';
 import '../../data/screenshot_repository.dart';
+import '../../domain/expense/money.dart';
+import '../../domain/expense/spend_summary.dart';
+import '../../services/expense_service.dart';
 import '../../services/gallery_service.dart';
 import '../../services/scan_service.dart';
+import '../spend/spend_providers.dart';
+import '../spend/spend_widgets.dart';
 
 /// Staggered entrance only on the very first build of Home.
 bool _homeAnimated = false;
@@ -32,10 +40,27 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   late final bool _animate = !_homeAnimated;
 
+  bool _celebrating = false;
+
   @override
   void initState() {
     super.initState();
     _homeAnimated = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeCelebrate(ref.read(spendBackfillProvider)));
+  }
+
+  /// One-time "We found 46 receipts" moment after the v1.1 backfill.
+  Future<void> _maybeCelebrate(BackfillResult? r) async {
+    if (r == null || r.count == 0 || _celebrating || !mounted) return;
+    _celebrating = true;
+    Haptics.medium();
+    final open = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _SpendCelebration(result: r, currency: ref.read(settingsProvider).defaultCurrency),
+    );
+    await ref.read(spendBackfillProvider.notifier).dismissCelebration();
+    if (open == true && mounted) StatefulNavigationShell.of(context).goBranch(Tabs.spend);
   }
 
   Future<void> _refresh() async {
@@ -53,6 +78,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(spendBackfillProvider, (_, next) => _maybeCelebrate(next));
     final stats = ref.watch(libraryStatsProvider);
     final cats = ref.watch(categoryStatsProvider);
     final recent = ref.watch(recentScreenshotsProvider);
@@ -119,6 +145,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: _enter(const _StorageCard(), 2),
                 ),
               ),
+              SliverToBoxAdapter(child: _enter(const _SpendCard(), 3)),
               const SliverToBoxAdapter(child: SectionHeader('Categories')),
               _CategoryGrid(stats: cats.value ?? const [], animate: _animate),
               SliverToBoxAdapter(
@@ -159,6 +186,11 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
+        CircleIconButton(
+          icon: Icons.settings_outlined,
+          tooltip: 'Settings',
+          onPressed: () => context.push(Routes.settings),
+        ),
       ],
     );
   }
@@ -176,7 +208,7 @@ class _SearchPill extends ConsumerWidget {
         semanticLabel: 'Search screenshots',
         onTap: () {
           ref.read(searchFocusRequestProvider.notifier).request();
-          StatefulNavigationShell.of(context).goBranch(1);
+          StatefulNavigationShell.of(context).goBranch(Tabs.search);
         },
         child: Container(
           height: 54,
@@ -325,7 +357,7 @@ class _StorageCard extends ConsumerWidget {
           if (report != null && report.reclaimableBytes > 0) ...[
             const SizedBox(height: Space.md),
             Pressable(
-              onTap: () => StatefulNavigationShell.of(context).goBranch(2),
+              onTap: () => StatefulNavigationShell.of(context).goBranch(Tabs.clean),
               child: Container(
                 constraints: const BoxConstraints(minHeight: 48),
                 padding: const EdgeInsets.symmetric(horizontal: Space.sm, vertical: Space.xs),
@@ -541,6 +573,116 @@ class _HomeSkeleton extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// "October spend · Rs 45,200" with a running-total sparkline.
+class _SpendCard extends ConsumerWidget {
+  const _SpendCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final month = monthStart(DateTime.now());
+    final spend = ref.watch(monthSpendProvider(month)).value;
+    if (spend == null || (spend.count == 0 && spend.previousTotalMinor == 0)) return const SizedBox.shrink();
+    final c = context.colors;
+    final pct = spend.changePct;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Space.screen, Space.sm, Space.screen, 0),
+      child: Pressable(
+        semanticLabel: 'Open Spend',
+        onTap: () => StatefulNavigationShell.of(context).goBranch(Tabs.spend),
+        child: Container(
+          padding: const EdgeInsets.all(Space.md),
+          decoration: BoxDecoration(color: c.surface, borderRadius: Radii.mdAll, border: Border.all(color: c.border)),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 5,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${DateFormat.MMMM().format(month)} spend', style: context.text.labelMedium),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: MoneyCountUp(spend.totalMinor, spend.currency, style: context.text.headlineSmall),
+                    ),
+                    if (pct != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '${pct >= 0 ? '▲' : '▼'} ${pct.abs().round()}% vs last month',
+                        style: context.text.labelSmall?.copyWith(color: pct >= 0 ? SpendStyle.up : SpendStyle.down),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(flex: 4, child: Sparkline(values: cumulative(spend.daily, month), height: 44)),
+              Icon(Icons.chevron_right_rounded, color: c.textTertiary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SpendCelebration extends StatelessWidget {
+  const _SpendCelebration({required this.result, required this.currency});
+  final BackfillResult result;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final totals = result.totalsByCurrency.entries.toList()
+      ..sort((a, b) => a.key == currency ? -1 : (b.key == currency ? 1 : b.value.compareTo(a.value)));
+    return Stack(
+      children: [
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(Space.screen, Space.lg, Space.screen, Space.md),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 76,
+                  height: 76,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: SpendStyle.income.withValues(alpha: 0.14),
+                    boxShadow: [BoxShadow(color: SpendStyle.income.withValues(alpha: 0.25), blurRadius: 40)],
+                  ),
+                  child: const Icon(Icons.receipt_long_rounded, size: 36, color: SpendStyle.income),
+                ),
+                const SizedBox(height: Space.lg),
+                Text('We found ${formatCount(result.count)} receipts', style: context.text.headlineSmall, textAlign: TextAlign.center),
+                const SizedBox(height: Space.xs),
+                if (totals.isNotEmpty)
+                  Text(
+                    '${totals.map((e) => formatMoneyMinor(e.value, e.key)).join(' · ')} tracked',
+                    style: context.text.titleMedium?.copyWith(color: SpendStyle.income),
+                    textAlign: TextAlign.center,
+                  ),
+                const SizedBox(height: Space.xs),
+                Text(
+                  'SnapLio now turns payment screenshots into a spend tracker, automatically and on your phone.',
+                  style: context.text.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: Space.lg),
+                GradientButton(label: 'See my spend', icon: Icons.account_balance_wallet_rounded, onPressed: () => Navigator.pop(context, true)),
+                const SizedBox(height: Space.xs),
+                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Later')),
+              ],
+            ),
+          ),
+        ),
+        Positioned.fill(child: IgnorePointer(child: ConfettiBurst(colors: [...SpendStyle.palette, Brand.sky]))),
+      ],
     );
   }
 }

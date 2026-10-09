@@ -146,6 +146,7 @@ class ExpenseService {
 
   Future<void> save(
     ExpenseView x, {
+    ExpenseType? type,
     required int amountMinor,
     required String currencyCode,
     required String? payee,
@@ -157,6 +158,7 @@ class ExpenseService {
     await repo.update(
       x.row.id,
       ExpensesCompanion(
+        type: type == null ? const Value.absent() : Value(type.name),
         amountMinor: Value(amountMinor),
         currency: Value(currencyCode),
         payee: Value(p),
