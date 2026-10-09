@@ -18,6 +18,8 @@ import '../features/scan/first_scan_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/folders_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/recap/recap_history_screen.dart';
+import '../features/recap/recap_story_screen.dart';
 import '../features/smart/smart_ui.dart';
 import '../features/spend/expense_edit_screen.dart';
 import '../features/spend/spend_review_screen.dart';
@@ -143,6 +145,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: rootNavigatorKey,
         path: '/expense/:id',
         pageBuilder: (c, s) => _slideIn(s, ExpenseEditScreen(id: int.tryParse(s.pathParameters['id']!) ?? -1)),
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: '/recap/:id',
+        pageBuilder: (c, s) => _fadeThrough(s, RecapStoryScreen(id: int.tryParse(s.pathParameters['id']!) ?? -1)),
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: Routes.recapHistory,
+        pageBuilder: (c, s) => _slideIn(s, const RecapHistoryScreen()),
       ),
       GoRoute(
         parentNavigatorKey: rootNavigatorKey,

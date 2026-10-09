@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/design/tokens.dart';
 import '../core/haptics.dart';
+import '../features/recap/recap_providers.dart';
 import '../features/smart/smart_actions.dart';
 import 'deep_links.dart';
 import 'providers.dart';
@@ -35,6 +36,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       _startScan();
       ref.read(spendBackfillProvider.notifier).runIfNeeded();
       ref.read(smartActionsProvider.notifier).onAppStart();
+      ref.read(recapControllerProvider.notifier).onAppStart();
       ref.read(deepLinkProvider).markReady();
     });
   }

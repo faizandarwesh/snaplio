@@ -24,6 +24,7 @@ import '../../domain/expense/spend_summary.dart';
 import '../../services/expense_service.dart';
 import '../../services/gallery_service.dart';
 import '../../services/scan_service.dart';
+import '../recap/recap_history_screen.dart';
 import '../smart/smart_ui.dart';
 import '../spend/spend_providers.dart';
 import '../spend/spend_widgets.dart';
@@ -146,6 +147,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: _enter(const _StorageCard(), 2),
                 ),
               ),
+              const SliverToBoxAdapter(child: RecapHomeCard()),
               SliverToBoxAdapter(child: _enter(const _SpendCard(), 3)),
               const SliverToBoxAdapter(child: SmartActionsHomeCard()),
               const SliverToBoxAdapter(child: SectionHeader('Categories')),

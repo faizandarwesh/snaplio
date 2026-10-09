@@ -455,30 +455,29 @@ class ScreenshotRepository {
 
   // ---------------------------------------------------------------- Cleanup
 
-  Stream<List<CleanupItem>> watchCleanupItems() {
-    return db
-        .customSelect(
-          'SELECT asset_id, category, created_at, size_bytes, width, height, text_hash, is_favorite, '
-          "CASE WHEN category = 'orders' THEN ocr_text ELSE NULL END AS ocr_text "
-          'FROM screenshots WHERE processed_at IS NOT NULL',
-          readsFrom: {_s},
-        )
-        .watch()
-        .map((rows) => [
-              for (final r in rows)
-                CleanupItem(
-                  assetId: r.read<String>('asset_id'),
-                  category: ScreenshotCategory.fromName(r.read<String>('category')),
-                  createdAt: r.read<DateTime>('created_at'),
-                  sizeBytes: r.read<int>('size_bytes'),
-                  width: r.read<int>('width'),
-                  height: r.read<int>('height'),
-                  textHash: r.readNullable<String>('text_hash'),
-                  ocrText: r.readNullable<String>('ocr_text'),
-                  isFavorite: r.read<bool>('is_favorite'),
-                ),
-            ]);
-  }
+  static const _cleanupSql = 'SELECT asset_id, category, created_at, size_bytes, width, height, text_hash, is_favorite, '
+      "CASE WHEN category = 'orders' THEN ocr_text ELSE NULL END AS ocr_text "
+      'FROM screenshots WHERE processed_at IS NOT NULL';
+
+  static CleanupItem _cleanupItem(QueryRow r) => CleanupItem(
+        assetId: r.read<String>('asset_id'),
+        category: ScreenshotCategory.fromName(r.read<String>('category')),
+        createdAt: r.read<DateTime>('created_at'),
+        sizeBytes: r.read<int>('size_bytes'),
+        width: r.read<int>('width'),
+        height: r.read<int>('height'),
+        textHash: r.readNullable<String>('text_hash'),
+        ocrText: r.readNullable<String>('ocr_text'),
+        isFavorite: r.read<bool>('is_favorite'),
+      );
+
+  Stream<List<CleanupItem>> watchCleanupItems() => db
+      .customSelect(_cleanupSql, readsFrom: {_s})
+      .watch()
+      .map((rows) => [for (final r in rows) _cleanupItem(r)]);
+
+  Future<List<CleanupItem>> cleanupItems() async =>
+      [for (final r in await db.customSelect(_cleanupSql, readsFrom: {_s}).get()) _cleanupItem(r)];
 
   // ---------------------------------------------------------------- Receipts
 

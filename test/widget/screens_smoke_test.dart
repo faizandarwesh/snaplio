@@ -13,6 +13,12 @@ import 'package:snap_lio/features/onboarding/onboarding_screen.dart';
 import 'package:snap_lio/features/onboarding/permission_screen.dart';
 import 'package:snap_lio/features/search/search_screen.dart';
 import 'package:snap_lio/data/expense_repository.dart';
+import 'package:snap_lio/data/recap_repository.dart';
+import 'package:snap_lio/domain/recap/weekly_recap.dart';
+import 'package:snap_lio/domain/expense/expense_category.dart';
+import 'package:snap_lio/features/recap/recap_history_screen.dart';
+import 'package:snap_lio/features/recap/recap_providers.dart';
+import 'package:snap_lio/features/recap/recap_story_screen.dart';
 import 'package:snap_lio/features/settings/settings_screen.dart';
 import 'package:snap_lio/features/spend/expense_edit_screen.dart';
 import 'package:snap_lio/features/spend/spend_providers.dart';
@@ -70,6 +76,29 @@ final _expenses = [
   _x(6, cur: 'USD'),
 ];
 
+final _recap = StoredRecap(
+  1,
+  DateTime.now(),
+  WeeklyRecap(
+    weekStart: DateTime(2026, 10, 4, 19),
+    weekEnd: DateTime(2026, 10, 11, 19),
+    screenshots: 31,
+    receipts: 6,
+    spentMinor: 1240000,
+    currency: 'PKR',
+    topCategory: ExpenseCategory.food,
+    topCategoryMinor: 600000,
+    unreadLinks: 3,
+    links: const [
+      RecapLink('1', 'https://www.example.com/a-very-long-article-path', 'example.com'),
+      RecapLink('2', 'https://flutter.dev', 'flutter.dev'),
+    ],
+    cleanableBytes: 180 * 1024 * 1024,
+    topSourceApp: 'WhatsApp',
+    topSourceAppCount: 12,
+  ),
+);
+
 Future<void> _pump(WidgetTester tester, Widget screen, {required Brightness brightness, double textScale = 1.3}) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
@@ -88,6 +117,8 @@ Future<void> _pump(WidgetTester tester, Widget screen, {required Brightness brig
             for (final c in ScreenshotCategory.values) CategoryStat(c, 120 + c.index * 7, 100000000, const ['a1', 'a2', 'a3']),
           ])),
       recentScreenshotsProvider.overrideWith((ref) => Stream.value([for (var i = 0; i < 6; i++) _row(i, ScreenshotCategory.otp)])),
+      recapsProvider.overrideWith((ref) => Stream.value([_recap])),
+      recapProvider.overrideWith((ref, id) => Stream.value(_recap)),
       monthExpensesProvider.overrideWith((ref, month) => Stream.value(_expenses)),
       needsReviewProvider.overrideWith((ref) => Stream.value([_expenses[2]])),
       expenseProvider.overrideWith((ref, id) => Stream.value(_expenses[2])),
@@ -124,6 +155,8 @@ void main() {
     'spend': () => const SpendScreen(),
     'expense detail': () => const ExpenseEditScreen(id: 2),
     'add expense': () => const ExpenseEditScreen(),
+    'recap story': () => const RecapStoryScreen(id: 1),
+    'recap history': () => const RecapHistoryScreen(),
   };
 
   for (final b in Brightness.values) {

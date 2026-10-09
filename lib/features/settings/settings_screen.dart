@@ -13,6 +13,7 @@ import '../../core/utils/format.dart';
 import '../../core/widgets/app_mark.dart';
 import '../../domain/notifications/smart_notifications.dart';
 import '../../services/gallery_service.dart';
+import '../recap/recap_providers.dart';
 import '../smart/smart_actions.dart';
 import 'package:snaplio_native/snaplio_native.dart';
 
@@ -83,6 +84,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ]),
           const _SmartGroup(),
+          const _RecapGroup(),
           _Group(title: 'Library', children: [
             _Tile(
               icon: Icons.refresh_rounded,
@@ -266,6 +268,76 @@ class _SmartGroup extends ConsumerWidget {
         subtitle: 'Fix battery restrictions on your phone',
         onTap: () => context.push(Routes.batteryHelp),
       ),
+    ]);
+  }
+}
+
+class _RecapGroup extends ConsumerWidget {
+  const _RecapGroup();
+
+  static const _days = {
+    DateTime.monday: 'Monday',
+    DateTime.tuesday: 'Tuesday',
+    DateTime.wednesday: 'Wednesday',
+    DateTime.thursday: 'Thursday',
+    DateTime.friday: 'Friday',
+    DateTime.saturday: 'Saturday',
+    DateTime.sunday: 'Sunday',
+  };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(recapControllerProvider);
+    final n = ref.read(recapControllerProvider.notifier);
+    final time = TimeOfDay(hour: s.hour, minute: s.minute).format(context);
+    return _Group(title: 'Weekly recap', children: [
+      SwitchListTile(
+        value: s.enabled,
+        onChanged: (v) {
+          Haptics.selection();
+          n.update(enabled: v);
+        },
+        secondary: Icon(Icons.auto_stories_outlined, color: context.colors.textSecondary),
+        title: Text('Weekly recap', style: context.text.bodyLarge),
+        subtitle: Text(s.enabled ? 'Every ${_days[s.weekday]} at $time' : 'Off', style: context.text.bodySmall),
+      ),
+      if (s.enabled) ...[
+        _Tile(
+          icon: Icons.calendar_view_week_rounded,
+          title: 'Day',
+          subtitle: _days[s.weekday],
+          onTap: () async {
+            final d = await showModalBottomSheet<int>(
+              context: context,
+              showDragHandle: true,
+              builder: (context) => SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final e in _days.entries)
+                      ListTile(
+                        title: Text(e.value),
+                        trailing: e.key == s.weekday ? const Icon(Icons.check_rounded, color: Brand.violet) : null,
+                        onTap: () => Navigator.pop(context, e.key),
+                      ),
+                  ],
+                ),
+              ),
+            );
+            if (d != null) await n.update(weekday: d);
+          },
+        ),
+        _Tile(
+          icon: Icons.schedule_rounded,
+          title: 'Time',
+          subtitle: time,
+          onTap: () async {
+            final t = await showTimePicker(context: context, initialTime: TimeOfDay(hour: s.hour, minute: s.minute));
+            if (t != null) await n.update(hour: t.hour, minute: t.minute);
+          },
+        ),
+      ],
+      _Tile(icon: Icons.history_rounded, title: 'Past weeks', onTap: () => context.push(Routes.recapHistory)),
     ]);
   }
 }
