@@ -116,6 +116,16 @@ class ExpenseRepository {
       .asyncMap((r) => db.screenshots.mapFromRow(r))
       .get();
 
+  /// Most recent expense that counts as spend (widget "latest receipt").
+  Future<ExpenseView?> latestCounted() async {
+    final r = await (db.select(_x)
+          ..where((t) => t.type.equals('expense') & t.isExcluded.equals(false) & t.duplicateOfId.isNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.date), (t) => OrderingTerm.desc(t.id)])
+          ..limit(1))
+        .getSingleOrNull();
+    return r == null ? null : ExpenseView(r);
+  }
+
   Future<String?> mostFrequentCurrency() async {
     final r = await db.customSelect(
       "SELECT currency, COUNT(*) AS n FROM expenses WHERE type = 'expense' AND is_excluded = 0 "

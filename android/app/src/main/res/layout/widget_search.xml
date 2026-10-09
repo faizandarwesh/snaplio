@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 4x1: pill search bar. Tap opens snaplio://search with the keyboard focused. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="6dp">
+    <LinearLayout
+        android:id="@+id/search_root"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_gravity="center_vertical"
+        android:background="@drawable/widget_pill_bg"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="16dp">
+        <ImageView
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:contentDescription="@null"
+            android:src="@drawable/widget_mark" />
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/widget_search_hint"
+            android:textColor="@color/widget_text_tertiary"
+            android:textSize="16sp" />
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:contentDescription="@string/widget_search_hint"
+            android:src="@drawable/widget_ic_search" />
+    </LinearLayout>
+</FrameLayout>

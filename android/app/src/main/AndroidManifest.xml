@@ -47,6 +47,29 @@
             <!-- snaplio_native delivers links to Dart itself (full URI incl. host). -->
             <meta-data android:name="flutter_deeplinking_enabled" android:value="false" />
         </activity>
+        <!-- Home-screen widgets (data pushed from Dart via home_widget). -->
+        <receiver
+            android:name=".widget.SearchWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_search_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_search_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.SnapshotWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_snapshot_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_snapshot_info" />
+        </receiver>
         <!-- ML Kit: the Latin text model is bundled via com.google.mlkit:text-recognition,
              so nothing is downloaded at runtime. -->
         <meta-data

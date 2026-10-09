@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 4x2: month spend + change, latest receipt, MB to clean, unread links.
+     Spend area and receipt open Spend, clean opens Clean, links open Search (Links). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/snapshot_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_card_bg"
+    android:orientation="vertical"
+    android:padding="14dp">
+    <LinearLayout
+        android:id="@+id/spend_area"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/spend_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="@string/widget_this_month"
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/spend_total"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="—"
+                android:textColor="@color/widget_text"
+                android:textSize="26sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/spend_change"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text=""
+                android:textColor="@color/widget_text_tertiary"
+                android:textSize="12sp" />
+        </LinearLayout>
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_gravity="top"
+            android:contentDescription="@null"
+            android:src="@drawable/widget_mark" />
+    </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+        <LinearLayout
+            android:id="@+id/receipt_cell"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/widget_cell_bg"
+            android:gravity="center_vertical"
+            android:orientation="vertical"
+            android:padding="10dp">
+            <TextView
+                android:id="@+id/receipt_value"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="—"
+                android:textColor="@color/widget_text"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/receipt_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/widget_latest_receipt"
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="12sp" />
+        </LinearLayout>
+        <FrameLayout android:layout_width="8dp" android:layout_height="match_parent" />
+        <LinearLayout
+            android:id="@+id/clean_cell"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/widget_cell_bg"
+            android:gravity="center_vertical"
+            android:orientation="vertical"
+            android:padding="10dp">
+            <TextView
+                android:id="@+id/clean_value"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="0 MB"
+                android:textColor="@color/widget_text"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/clean_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/widget_to_clean"
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="12sp" />
+        </LinearLayout>
+        <FrameLayout android:layout_width="8dp" android:layout_height="match_parent" />
+        <LinearLayout
+            android:id="@+id/links_cell"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/widget_cell_bg"
+            android:gravity="center_vertical"
+            android:orientation="vertical"
+            android:padding="10dp">
+            <TextView
+                android:id="@+id/links_value"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="0"
+                android:textColor="@color/widget_text"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/links_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/widget_unread_links"
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_search_label">SnapLio search</string>
+    <string name="widget_search_description">Search the text in your screenshots</string>
+    <string name="widget_search_hint">Search screenshots</string>
+    <string name="widget_snapshot_label">SnapLio snapshot</string>
+    <string name="widget_snapshot_description">Monthly spend, latest receipt, space to clean and unread links</string>
+    <string name="widget_this_month">This month</string>
+    <string name="widget_latest_receipt">Latest receipt</string>
+    <string name="widget_to_clean">to clean</string>
+    <string name="widget_unread_links">unread links</string>
+</resources>

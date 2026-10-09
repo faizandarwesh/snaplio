@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SnapLio mark: violet to sky rounded square with a sparkle. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="28dp"
+    android:height="28dp"
+    android:viewportWidth="28"
+    android:viewportHeight="28">
+    <path android:pathData="M8,0h12a8,8 0,0 1,8 8v12a8,8 0,0 1,-8 8h-12a8,8 0,0 1,-8 -8v-12a8,8 0,0 1,8 -8z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="28" android:endY="28"
+                android:startColor="#FF7C5CFF"
+                android:endColor="#FF4FC3F7" />
+        </aapt:attr>
+    </path>
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M14,6.5l1.9,4.6l4.6,1.9l-4.6,1.9L14,19.5l-1.9,-4.6L7.5,13l4.6,-1.9z" />
+</vector>

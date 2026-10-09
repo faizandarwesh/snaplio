@@ -41,6 +41,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   bool _loading = false;
   Object? _error;
 
+  @override
+  void initState() {
+    super.initState();
+    // A widget / deep link may ask for focus or the Links filter before this
+    // tab has ever been built (cold start), so apply pending requests once.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (ref.read(searchPresetProvider).links) {
+        setState(() => _cats.add(ScreenshotCategory.links));
+        _run();
+      } else if (ref.read(searchFocusRequestProvider) > 0) {
+        _focus.requestFocus();
+      }
+    });
+  }
+
   bool get _hasFilters => _cats.isNotEmpty || _apps.isNotEmpty || _date != null;
   bool get _hasQuery => _controller.text.trim().isNotEmpty;
 

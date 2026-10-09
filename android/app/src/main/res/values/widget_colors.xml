@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen widget palette (light). Dark lives in values-night. Mirrors lib/core/design/tokens.dart. -->
+<resources>
+    <color name="widget_bg">#FFFFFFFF</color>
+    <color name="widget_cell">#FFF5F5F8</color>
+    <color name="widget_border">#14000000</color>
+    <color name="widget_text">#FF111118</color>
+    <color name="widget_text_secondary">#FF5E5E6B</color>
+    <color name="widget_text_tertiary">#FF8A8A97</color>
+    <color name="widget_up">#FFD9534A</color>
+    <color name="widget_down">#FF2E9E62</color>
+</resources>

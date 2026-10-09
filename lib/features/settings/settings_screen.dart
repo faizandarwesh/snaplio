@@ -15,6 +15,7 @@ import '../../domain/notifications/smart_notifications.dart';
 import '../../services/gallery_service.dart';
 import '../recap/recap_providers.dart';
 import '../smart/smart_actions.dart';
+import '../../services/widget_sync.dart';
 import 'package:snaplio_native/snaplio_native.dart';
 
 final _packageInfoProvider = FutureProvider<PackageInfo>((ref) => PackageInfo.fromPlatform());
@@ -85,6 +86,7 @@ class SettingsScreen extends ConsumerWidget {
           ]),
           const _SmartGroup(),
           const _RecapGroup(),
+          const _WidgetsGroup(),
           _Group(title: 'Library', children: [
             _Tile(
               icon: Icons.refresh_rounded,
@@ -338,6 +340,38 @@ class _RecapGroup extends ConsumerWidget {
         ),
       ],
       _Tile(icon: Icons.history_rounded, title: 'Past weeks', onTap: () => context.push(Routes.recapHistory)),
+    ]);
+  }
+}
+
+/// "Add widget": pins a home-screen widget where the launcher supports it.
+class _WidgetsGroup extends StatelessWidget {
+  const _WidgetsGroup();
+
+  Future<void> _add(BuildContext context, String provider) async {
+    final ok = await WidgetSync.requestPin(provider);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Long-press your home screen → Widgets → SnapLio')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _Group(title: 'Home-screen widgets', children: [
+      _Tile(
+        icon: Icons.search_rounded,
+        title: 'Add search bar',
+        subtitle: '4×1 · jump straight into search',
+        onTap: () => _add(context, WidgetSync.searchProvider),
+      ),
+      _Tile(
+        icon: Icons.dashboard_outlined,
+        title: 'Add snapshot',
+        subtitle: '4×2 · spend, latest receipt, space to clean, unread links',
+        onTap: () => _add(context, WidgetSync.snapshotProvider),
+      ),
     ]);
   }
 }

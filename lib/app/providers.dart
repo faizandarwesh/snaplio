@@ -11,6 +11,7 @@ import '../services/gallery_service.dart';
 import '../services/ocr_service.dart';
 import '../services/prefs_keys.dart';
 import '../services/scan_service.dart';
+import '../services/widget_sync.dart';
 
 // ------------------------------------------------------------------ Settings
 
@@ -159,8 +160,20 @@ class _SettingsCurrencyStore implements CurrencyStore {
   Future<void> setAuto(String currency) => ref.read(settingsProvider.notifier).setCurrency(currency, manual: false);
 }
 
+final widgetSyncProvider = Provider<WidgetSync>((ref) {
+  final s = WidgetSync(
+    prefs: ref.watch(sharedPrefsProvider),
+    shots: ref.watch(repositoryProvider),
+    expenses: ref.watch(expenseRepositoryProvider),
+  );
+  ref.onDispose(s.dispose);
+  return s;
+});
+
 final expenseServiceProvider = Provider<ExpenseService>(
-  (ref) => ExpenseService(repo: ref.watch(expenseRepositoryProvider), currency: _SettingsCurrencyStore(ref)),
+  (ref) => ExpenseService(repo: ref.watch(expenseRepositoryProvider), currency: _SettingsCurrencyStore(ref))
+    // Any spend change refreshes the home-screen widgets (debounced).
+    ..onChanged = ref.read(widgetSyncProvider).schedule,
 );
 
 final scanServiceProvider = Provider<ScanService>((ref) {

@@ -9,6 +9,7 @@ import '../services/ocr_service.dart';
 import '../services/prefs_keys.dart';
 import '../services/scan_service.dart';
 import '../services/smart_notifier.dart';
+import '../services/widget_sync.dart';
 
 /// The app's data + services, wired for a headless engine (no Riverpod, no
 /// Activity). Same classes the UI uses — logic lives in one place.
@@ -63,6 +64,10 @@ class BackgroundServices {
       debugPrint('Notify failed: $e');
     }
   }
+
+  /// Fresh numbers for the home-screen widgets after background writes.
+  Future<void> pushWidgets() =>
+      WidgetSync(prefs: prefs, shots: shots, expenses: expenses.repo).push();
 
   Future<void> dispose() async {
     await scan.dispose();

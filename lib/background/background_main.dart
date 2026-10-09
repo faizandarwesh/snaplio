@@ -24,6 +24,7 @@ Future<void> runHeadlessEngine() async {
           final s = services ??= await BackgroundServices.open();
           await applyPendingOps(expenses: s.expenses, shots: s.shots);
           if (task == 'scan') await s.scanNewAndNotify();
+          await s.pushWidgets();
         } catch (e, st) {
           debugPrint('Background task $task failed: $e\n$st');
         }

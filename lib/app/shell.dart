@@ -10,6 +10,7 @@ import '../core/haptics.dart';
 import '../features/recap/recap_providers.dart';
 import '../features/smart/smart_actions.dart';
 import 'deep_links.dart';
+import '../services/scan_service.dart';
 import 'providers.dart';
 
 /// App shell: tab content + floating frosted pill navigation that hides on
@@ -38,12 +39,14 @@ class _AppShellState extends ConsumerState<AppShell> {
       ref.read(smartActionsProvider.notifier).onAppStart();
       ref.read(recapControllerProvider.notifier).onAppStart();
       ref.read(deepLinkProvider).markReady();
+      ref.read(widgetSyncProvider).schedule();
     });
   }
 
   Future<void> _onResume() async {
     // The background job may have written while we were away.
     await ref.read(smartActionsProvider.notifier).onResume();
+    ref.read(widgetSyncProvider).schedule();
     final access = await ref.read(galleryAccessProvider.notifier).refresh();
     if (access.canRead) _startScan();
   }
@@ -80,6 +83,10 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    // A finished scan changes MB-to-clean, links and receipts on the widgets.
+    ref.listen(scanProgressProvider.select((p) => p.value?.phase), (prev, next) {
+      if (next == ScanPhase.done && prev != ScanPhase.done) ref.read(widgetSyncProvider).schedule();
+    });
     return Scaffold(
       extendBody: true,
       resizeToAvoidBottomInset: false,

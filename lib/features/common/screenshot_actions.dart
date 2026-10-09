@@ -23,6 +23,7 @@ Future<DeleteOutcome> deleteScreenshots(WidgetRef ref, List<ScreenshotRow> rows)
   final deleted = (await gallery.delete([for (final r in rows) r.assetId])).toSet();
   if (deleted.isEmpty) return const DeleteOutcome(0, 0);
   await repo.deleteByIds(deleted);
+  ref.read(widgetSyncProvider).schedule();
   final bytes = rows.where((r) => deleted.contains(r.assetId)).fold<int>(0, (s, r) => s + r.sizeBytes);
   Haptics.medium();
   return DeleteOutcome(deleted.length, bytes);
