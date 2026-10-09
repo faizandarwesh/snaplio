@@ -5,7 +5,7 @@ import '../domain/entity_extractor/entity_extractor.dart';
 import '../domain/models.dart';
 import 'db/app_database.dart';
 
-export 'db/app_database.dart' show ScreenshotRow, EntityRow, AppDatabase;
+export 'db/app_database.dart' show ScreenshotRow, EntityRow, ExpenseRow, RecapRow, AppDatabase;
 
 /// Snippet highlight markers (control chars never appear in OCR output).
 const kHlStart = '\u0002';
@@ -45,6 +45,16 @@ class SearchHit {
 
   /// Text excerpt with matches wrapped in [kHlStart] / [kHlEnd].
   final String? snippet;
+}
+
+class UnreadLink {
+  const UnreadLink(this.assetId, this.url, this.display, this.createdAt);
+  final String assetId;
+  final String url;
+  final String display;
+  final DateTime createdAt;
+
+  String get host => Uri.tryParse(url)?.host.replaceFirst(RegExp(r'^www\.'), '') ?? display;
 }
 
 /// New asset discovered in the gallery (before OCR).
@@ -107,11 +117,51 @@ class ScreenshotRepository {
     }
   }
 
-  Future<List<ScreenshotRow>> nextUnprocessed(int limit) => (db.select(_s)
-        ..where((t) => t.processedAt.isNull())
-        ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
-        ..limit(limit))
-      .get();
+  /// A claim older than this is considered abandoned (engine killed mid-OCR).
+  static const claimTimeout = Duration(minutes: 2);
+
+  /// Unprocessed rows nobody else is working on, newest first. With [ids],
+  /// only those rows.
+  Future<List<ScreenshotRow>> nextUnprocessed(int limit, {List<String>? ids}) {
+    final stale = DateTime.now().subtract(claimTimeout);
+    return (db.select(_s)
+          ..where((t) {
+            var w = t.processedAt.isNull() & (t.claimedAt.isNull() | t.claimedAt.isSmallerThanValue(stale));
+            if (ids != null) w = w & t.assetId.isIn(ids);
+            return w;
+          })
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+          ..limit(limit))
+        .get();
+  }
+
+  /// Atomically takes ownership of an unprocessed row. SQLite serializes
+  /// writers, so exactly one engine (foreground app or background job) wins
+  /// even when both see the same new screenshot at the same moment.
+  Future<bool> claim(String assetId) async {
+    final now = DateTime.now();
+    final n = await db.customUpdate(
+      'UPDATE screenshots SET claimed_at = ? '
+      'WHERE asset_id = ? AND processed_at IS NULL AND (claimed_at IS NULL OR claimed_at < ?)',
+      variables: [
+        Variable.withDateTime(now),
+        Variable.withString(assetId),
+        Variable.withDateTime(now.subtract(claimTimeout)),
+      ],
+      updates: {_s},
+    );
+    return n == 1;
+  }
+
+  Future<DateTime?> latestCreatedAt() async {
+    final c = _s.createdAt.max();
+    final q = db.selectOnly(_s)..addColumns([c]);
+    return q.map((r) => r.read(c)).getSingleOrNull();
+  }
+
+  Future<ScreenshotRow?> one(String id) => (db.select(_s)..where((t) => t.assetId.equals(id))).getSingleOrNull();
+
+  Future<List<EntityRow>> entitiesOf(String id) => (db.select(_e)..where((t) => t.assetId.equals(id))).get();
 
   Future<int> unprocessedCount() async {
     final c = _s.assetId.count();
@@ -139,8 +189,14 @@ class ScreenshotRepository {
           sourceApp: Value(analysis.sourceApp),
           textHash: Value(analysis.textHash),
           processedAt: Value(DateTime.now()),
+          claimedAt: const Value(null),
         ),
       );
+      // Keep "opened" state of links across re-scans.
+      final opened = {
+        for (final e in await (db.select(_e)..where((t) => t.assetId.equals(row.assetId) & t.openedAt.isNotNull())).get())
+          '${e.type}|${e.value}': e.openedAt,
+      };
       await (db.delete(_e)..where((t) => t.assetId.equals(row.assetId))).go();
       if (analysis.entities.isNotEmpty) {
         await db.batch((b) => b.insertAll(_e, [
@@ -150,6 +206,7 @@ class ScreenshotRepository {
                   type: e.type.name,
                   value: e.value,
                   displayValue: e.displayValue,
+                  openedAt: Value(opened['${e.type.name}|${e.value}']),
                 ),
             ]));
       }
@@ -158,9 +215,11 @@ class ScreenshotRepository {
 
   /// Marks a screenshot as processed even when OCR failed, so the queue moves on.
   Future<void> markFailed(String assetId) =>
-      (db.update(_s)..where((t) => t.assetId.equals(assetId))).write(ScreenshotsCompanion(processedAt: Value(DateTime.now())));
+      (db.update(_s)..where((t) => t.assetId.equals(assetId)))
+          .write(ScreenshotsCompanion(processedAt: Value(DateTime.now()), claimedAt: const Value(null)));
 
-  Future<void> resetAllProcessing() => db.update(_s).write(const ScreenshotsCompanion(processedAt: Value(null)));
+  Future<void> resetAllProcessing() =>
+      db.update(_s).write(const ScreenshotsCompanion(processedAt: Value(null), claimedAt: Value(null)));
 
   // ------------------------------------------------------------------ Reads
 
@@ -350,6 +409,49 @@ class ScreenshotRepository {
       (db.update(_s)..where((t) => t.assetId.equals(id))).write(
         ScreenshotsCompanion(category: Value(c.name), categoryLocked: const Value(true)),
       );
+
+  /// Records that a link was opened (from the app or a notification).
+  Future<void> markLinkOpened(String assetId, String url) =>
+      (db.update(_e)..where((t) => t.assetId.equals(assetId) & t.type.equals(EntityType.url.name) & t.value.equals(url)))
+          .write(EntitiesCompanion(openedAt: Value(DateTime.now())));
+
+  /// Links saved in Links screenshots that were never opened, newest first.
+  Future<List<UnreadLink>> unreadLinks({DateTime? since, int limit = 50}) async {
+    final rows = await db.customSelect(
+      'SELECT e.asset_id, e.value, e.display_value, s.created_at FROM entities e '
+      'JOIN screenshots s ON s.asset_id = e.asset_id '
+      "WHERE e.type = 'url' AND e.opened_at IS NULL AND s.category = 'links' "
+      '${since == null ? '' : 'AND s.created_at >= ? '}'
+      'GROUP BY e.asset_id ORDER BY s.created_at DESC LIMIT $limit',
+      variables: [if (since != null) Variable.withDateTime(since)],
+      readsFrom: {_s, _e},
+    ).get();
+    return [
+      for (final r in rows)
+        UnreadLink(r.read<String>('asset_id'), r.read<String>('value'), r.read<String>('display_value'), r.read<DateTime>('created_at')),
+    ];
+  }
+
+  Future<int> unreadLinkCount() async {
+    final r = await db.customSelect(
+      'SELECT COUNT(DISTINCT e.asset_id) AS n FROM entities e JOIN screenshots s ON s.asset_id = e.asset_id '
+      "WHERE e.type = 'url' AND e.opened_at IS NULL AND s.category = 'links'",
+    ).getSingle();
+    return r.read<int>('n');
+  }
+
+  /// Ids of Links screenshots with at least one unopened link (for the
+  /// "links" deep link / Search filter).
+  Future<List<String>> unreadLinkAssetIds() async => [for (final l in await unreadLinks(limit: 500)) l.assetId];
+
+  /// Screenshots created in [from, to).
+  Future<List<ScreenshotRow>> createdBetween(DateTime from, DateTime to) => (db.select(_s)
+        ..where((t) => t.createdAt.isBiggerOrEqualValue(from) & t.createdAt.isSmallerThanValue(to)))
+      .get();
+
+  /// Tells live queries on this connection that another engine (the
+  /// background job) may have written to the database file.
+  void notifyExternalChanges() => db.markTablesUpdated(db.allTables);
 
   // ---------------------------------------------------------------- Cleanup
 

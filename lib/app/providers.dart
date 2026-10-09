@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/expense_repository.dart';
 import '../data/screenshot_repository.dart';
 import '../domain/cleanup_rules/cleanup_rules.dart';
 import '../domain/models.dart';
+import '../services/expense_service.dart';
 import '../services/gallery_service.dart';
 import '../services/ocr_service.dart';
+import '../services/prefs_keys.dart';
 import '../services/scan_service.dart';
 
 // ------------------------------------------------------------------ Settings
@@ -22,6 +25,8 @@ class AppSettings {
     required this.onboardingDone,
     required this.excludedAlbumIds,
     required this.recentSearches,
+    required this.defaultCurrency,
+    required this.currencyManual,
   });
 
   final ThemeMode themeMode;
@@ -29,17 +34,27 @@ class AppSettings {
   final Set<String> excludedAlbumIds;
   final List<String> recentSearches;
 
+  /// ISO code used when a receipt shows no currency, and as Spend's primary.
+  final String defaultCurrency;
+
+  /// True once the user picked it; otherwise it follows their receipts.
+  final bool currencyManual;
+
   AppSettings copyWith({
     ThemeMode? themeMode,
     bool? onboardingDone,
     Set<String>? excludedAlbumIds,
     List<String>? recentSearches,
+    String? defaultCurrency,
+    bool? currencyManual,
   }) =>
       AppSettings(
         themeMode: themeMode ?? this.themeMode,
         onboardingDone: onboardingDone ?? this.onboardingDone,
         excludedAlbumIds: excludedAlbumIds ?? this.excludedAlbumIds,
         recentSearches: recentSearches ?? this.recentSearches,
+        defaultCurrency: defaultCurrency ?? this.defaultCurrency,
+        currencyManual: currencyManual ?? this.currencyManual,
       );
 }
 
@@ -62,7 +77,21 @@ class SettingsNotifier extends Notifier<AppSettings> {
       onboardingDone: p.getBool(_kOnboarding) ?? false,
       excludedAlbumIds: (p.getStringList(_kExcluded) ?? const []).toSet(),
       recentSearches: p.getStringList(_kRecent) ?? const [],
+      defaultCurrency: p.getString(PrefsKeys.defaultCurrency) ?? 'PKR',
+      currencyManual: p.getBool(PrefsKeys.currencyManual) ?? false,
     );
+  }
+
+  /// Re-reads values other engines (background job) may have written.
+  Future<void> reload() async {
+    await _p.reload();
+    ref.invalidateSelf();
+  }
+
+  Future<void> setCurrency(String code, {bool manual = true}) async {
+    state = state.copyWith(defaultCurrency: code, currencyManual: manual || state.currencyManual);
+    await _p.setString(PrefsKeys.defaultCurrency, code);
+    if (manual) await _p.setBool(PrefsKeys.currencyManual, true);
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
@@ -112,16 +141,79 @@ final repositoryProvider = Provider<ScreenshotRepository>(
 
 final galleryServiceProvider = Provider<GalleryService>((ref) => GalleryService());
 
+final expenseRepositoryProvider = Provider<ExpenseRepository>(
+  (ref) => ExpenseRepository(ref.watch(databaseProvider)),
+);
+
+class _SettingsCurrencyStore implements CurrencyStore {
+  _SettingsCurrencyStore(this.ref);
+  final Ref ref;
+
+  @override
+  String get defaultCurrency => ref.read(settingsProvider).defaultCurrency;
+
+  @override
+  bool get isManual => ref.read(settingsProvider).currencyManual;
+
+  @override
+  Future<void> setAuto(String currency) => ref.read(settingsProvider.notifier).setCurrency(currency, manual: false);
+}
+
+final expenseServiceProvider = Provider<ExpenseService>(
+  (ref) => ExpenseService(repo: ref.watch(expenseRepositoryProvider), currency: _SettingsCurrencyStore(ref)),
+);
+
 final scanServiceProvider = Provider<ScanService>((ref) {
   final service = ScanService(
     repo: ref.watch(repositoryProvider),
     gallery: ref.watch(galleryServiceProvider),
     ocr: OcrService(),
     excludedAlbumIds: () => ref.read(settingsProvider).excludedAlbumIds,
+    expenses: ref.watch(expenseServiceProvider),
   );
   ref.onDispose(service.dispose);
   return service;
 });
+
+/// Turns receipts scanned before v1.1 into expenses, once. The result is kept
+/// for the one-time "We found N receipts" celebration on Home.
+class SpendBackfill extends Notifier<BackfillResult?> {
+  bool _started = false;
+
+  /// A pending celebration survives an app kill: "46|PKR:12840000,USD:1299".
+  @override
+  BackfillResult? build() {
+    final raw = ref.read(sharedPrefsProvider).getString(PrefsKeys.spendCelebration);
+    if (raw == null) return null;
+    final parts = raw.split('|');
+    final totals = <String, int>{
+      for (final kv in parts.length > 1 && parts[1].isNotEmpty ? parts[1].split(',') : const <String>[])
+        kv.split(':').first: int.tryParse(kv.split(':').last) ?? 0,
+    };
+    return BackfillResult(int.tryParse(parts.first) ?? 0, totals);
+  }
+
+  Future<void> runIfNeeded() async {
+    final p = ref.read(sharedPrefsProvider);
+    if (_started || (p.getBool(PrefsKeys.spendBackfillDone) ?? false)) return;
+    _started = true;
+    final result = await ref.read(expenseServiceProvider).backfill();
+    await p.setBool(PrefsKeys.spendBackfillDone, true);
+    // Only users upgrading from v1 (who already had receipts) get the moment.
+    if (result.count > 0) {
+      final totals = result.totalsByCurrency.entries.map((e) => '${e.key}:${e.value}').join(',');
+      await p.setString(PrefsKeys.spendCelebration, '${result.count}|$totals');
+      state = result;
+    }
+  }
+
+  Future<void> dismissCelebration() async {
+    await ref.read(sharedPrefsProvider).remove(PrefsKeys.spendCelebration);
+    state = null;
+  }
+}
+
+final spendBackfillProvider = NotifierProvider<SpendBackfill, BackfillResult?>(SpendBackfill.new);
 
 final scanProgressProvider = StreamProvider<ScanProgress>(
   (ref) => ref.watch(scanServiceProvider).progress,

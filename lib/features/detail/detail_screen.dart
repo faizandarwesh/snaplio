@@ -467,6 +467,14 @@ class _InfoSheet extends ConsumerWidget {
     );
     if (picked != null && picked != current) {
       await ref.read(repositoryProvider).setCategory(row.assetId, picked);
+      // Keep Spend in step with the user's call on what is a receipt.
+      final expenses = ref.read(expenseServiceProvider);
+      if (picked == ScreenshotCategory.receipts) {
+        await expenses.ingestScreenshot(assetId: row.assetId, ocrText: row.ocrText, createdAt: row.createdAt);
+      } else if (current == ScreenshotCategory.receipts) {
+        await ref.read(expenseRepositoryProvider).deleteUnconfirmedAutoForAsset(row.assetId);
+        expenses.onChanged?.call();
+      }
     }
   }
 }

@@ -64,17 +64,27 @@ class GalleryService {
     return '$base AND bucket_id NOT IN (${ids.join(',')})';
   }
 
-  PMFilter _filter(Set<String> excluded) => CustomFilter.sql(
-        where: screenshotWhere(excluded),
-        orderBy: [OrderByItem.desc(CustomColumns.base.createDate)],
-      )..needTitle = true;
+  PMFilter _filter(Set<String> excluded, {DateTime? since}) {
+    var where = screenshotWhere(excluded);
+    // MediaStore date_added is in seconds.
+    if (since != null) where = '($where) AND date_added >= ${since.millisecondsSinceEpoch ~/ 1000}';
+    return CustomFilter.sql(
+      where: where,
+      orderBy: [OrderByItem.desc(CustomColumns.base.createDate)],
+    )..needTitle = true;
+  }
+
+  /// Background engines have no Activity to ask for permission with; the
+  /// app already holds it, so skip photo_manager's check there.
+  Future<void> ignorePermissionCheck() => PhotoManager.setIgnorePermissionCheck(true);
 
   /// Lists every screenshot visible to the app, de-duplicated by asset id.
-  Future<List<DiscoveredAsset>> findScreenshots({Set<String> excludedAlbumIds = const {}}) async {
+  /// With [since], only screenshots added after it (fast path for new ones).
+  Future<List<DiscoveredAsset>> findScreenshots({Set<String> excludedAlbumIds = const {}, DateTime? since}) async {
     final paths = await PhotoManager.getAssetPathList(
       type: RequestType.image,
       onlyAll: true,
-      filterOption: _filter(excludedAlbumIds),
+      filterOption: _filter(excludedAlbumIds, since: since),
     );
     if (paths.isEmpty) return const [];
     final all = paths.first;

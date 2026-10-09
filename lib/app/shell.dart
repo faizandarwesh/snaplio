@@ -29,7 +29,10 @@ class _AppShellState extends ConsumerState<AppShell> {
   void initState() {
     super.initState();
     _lifecycle = AppLifecycleListener(onResume: _onResume);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startScan());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startScan();
+      ref.read(spendBackfillProvider.notifier).runIfNeeded();
+    });
   }
 
   Future<void> _onResume() async {

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../data/screenshot_repository.dart';
 import '../domain/analyzer.dart';
 import '../domain/models.dart';
+import 'expense_service.dart';
 import 'gallery_service.dart';
 import 'ocr_service.dart';
 
@@ -44,6 +45,17 @@ class ScanProgress {
       );
 }
 
+/// Result of processing one screenshot (feeds notifications and toasts).
+class ProcessedShot {
+  const ProcessedShot({required this.row, required this.category, required this.entities, this.expense});
+
+  /// The row as it was before processing (id, file name, createdAt).
+  final ScreenshotRow row;
+  final ScreenshotCategory category;
+  final List<ExtractedEntity> entities;
+  final IngestResult? expense;
+}
+
 /// Finds screenshots, diffs them against the DB and OCRs the unprocessed queue
 /// newest-first in small batches. Resumable (unprocessed rows have
 /// `processedAt == null`) and incremental (only new assets are inserted).
@@ -53,8 +65,12 @@ class ScanService {
     required this.gallery,
     required this.ocr,
     required this.excludedAlbumIds,
+    this.expenses,
     this.analyzer = const ScreenshotAnalyzer(),
   });
+
+  /// Creates expenses for receipts as they are sorted (null in tests).
+  final ExpenseService? expenses;
 
   final ScreenshotRepository repo;
   final GalleryService gallery;
@@ -65,6 +81,10 @@ class ScanService {
   static const batchSize = 8;
 
   final _controller = StreamController<ScanProgress>.broadcast();
+  final _processed = StreamController<ProcessedShot>.broadcast();
+
+  /// Every screenshot this service finishes, from any scan path.
+  Stream<ProcessedShot> get processed => _processed.stream;
   ScanProgress _current = ScanProgress.idle;
   Future<void>? _running;
   bool _cancelled = false;
@@ -110,8 +130,8 @@ class ScanService {
         if (batch.isEmpty) break;
         for (final row in batch) {
           if (_cancelled) break;
-          final category = await _processOne(row);
-          if (category != null) counts[category] = (counts[category] ?? 0) + 1;
+          final shot = await _processOne(row);
+          if (shot != null) counts[shot.category] = (counts[shot.category] ?? 0) + 1;
           processed++;
         }
         _emit(ScanProgress(
@@ -123,6 +143,7 @@ class ScanService {
         // Let the UI breathe between batches.
         await Future<void>.delayed(const Duration(milliseconds: 16));
       }
+      if (processed > 0) await expenses?.autoDetectCurrency();
       _emit(_current.copyWith(phase: ScanPhase.done));
     } catch (e, st) {
       debugPrint('Scan failed: $e\n$st');
@@ -141,7 +162,29 @@ class ScanService {
     if (removed.isNotEmpty) await repo.deleteByIds(removed);
   }
 
-  Future<ScreenshotCategory?> _processOne(ScreenshotRow row) async {
+  /// Fast path for brand-new screenshots (background job, foreground
+  /// listener): discovers only assets added since [since] and processes just
+  /// those plus any recent leftovers. Never deletes rows.
+  Future<List<ProcessedShot>> scanNew({required DateTime since}) async {
+    final access = await gallery.currentAccess();
+    if (!access.canRead) return const [];
+    final found = await gallery.findScreenshots(excludedAlbumIds: excludedAlbumIds(), since: since);
+    if (found.isEmpty) return const [];
+    final existing = await repo.allAssetIds();
+    await repo.insertDiscovered([for (final a in found) if (!existing.contains(a.id)) a]);
+    final rows = await repo.nextUnprocessed(found.length, ids: [for (final a in found) a.id]);
+    final out = <ProcessedShot>[];
+    // Oldest first so grouped summaries read in order.
+    for (final row in rows.reversed) {
+      final shot = await _processOne(row);
+      if (shot != null) out.add(shot);
+    }
+    return out;
+  }
+
+  Future<ProcessedShot?> _processOne(ScreenshotRow row) async {
+    // Another engine may already own this screenshot.
+    if (!await repo.claim(row.assetId)) return null;
     try {
       final File? file = await gallery.fileFor(row.assetId);
       if (file == null || !await file.exists()) {
@@ -164,7 +207,18 @@ class ScanService {
         ocrText: text,
         analysis: analysis,
       );
-      return row.categoryLocked ? ScreenshotCategory.fromName(row.category) : analysis.category;
+      final category = row.categoryLocked ? ScreenshotCategory.fromName(row.category) : analysis.category;
+      IngestResult? expense;
+      if (category == ScreenshotCategory.receipts && expenses != null) {
+        try {
+          expense = await expenses!.ingestScreenshot(assetId: row.assetId, ocrText: text, createdAt: row.createdAt);
+        } catch (e) {
+          debugPrint('Expense extraction failed for ${row.assetId}: $e');
+        }
+      }
+      final shot = ProcessedShot(row: row, category: category, entities: analysis.entities, expense: expense);
+      if (!_processed.isClosed) _processed.add(shot);
+      return shot;
     } catch (e) {
       debugPrint('Processing failed for ${row.assetId}: $e');
       await repo.markFailed(row.assetId);
@@ -175,6 +229,7 @@ class ScanService {
   Future<void> dispose() async {
     _cancelled = true;
     await _controller.close();
+    await _processed.close();
     await ocr.dispose();
   }
 }

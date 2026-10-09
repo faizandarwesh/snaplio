@@ -7,14 +7,14 @@ export 'tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Screenshots, Entities])
+@DriftDatabase(tables: [Screenshots, Entities, Expenses, MerchantRules, Recaps])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   AppDatabase.defaults() : super(driftDatabase(name: 'snaplio'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -22,9 +22,28 @@ class AppDatabase extends _$AppDatabase {
           await m.createAll();
           await _createFts();
         },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            // v2 (SnapLio 1.1): purely additive — existing rows are untouched.
+            // Existing receipts are turned into expenses after open by
+            // ExpenseService.backfillIfNeeded().
+            await m.addColumn(screenshots, screenshots.claimedAt);
+            await m.addColumn(entities, entities.openedAt);
+            await m.createTable(expenses);
+            await m.createTable(merchantRules);
+            await m.createTable(recaps);
+            await m.createIndex(idxExpensesDate);
+            await m.createIndex(idxExpensesAsset);
+            await m.createIndex(idxExpensesTid);
+            await m.createIndex(idxRecapsWeek);
+          }
+        },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
           await customStatement('PRAGMA journal_mode = WAL');
+          // The background job engine opens its own connection to this file;
+          // wait for its write lock instead of failing with SQLITE_BUSY.
+          await customStatement('PRAGMA busy_timeout = 5000');
         },
       );
 
